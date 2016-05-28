@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Babylonyzer</title>
+
+    <script src="./libs/babylon.2.3.js"></script>
+    <script src="./libs/babylon.pbrMaterial.min.js"></script>
+    <script src="./libs/cannon.js"></script>
+    <script src="./libs/bGUI-1.3.0.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/keymaster.js"></script>
+    <script src="./js/rainbowvis.js"></script>
+    
+    <!-- fx -->
+    <script src="./js/fxIntro.js"></script>
+    <script src="./js/fxMeter.js"></script>
+    <script src="./js/fxFloorWave.js"></script>
+    <script src="./js/fxMirrorGround.js"></script>
+    <script src="./js/fxTunnel.js"></script>
+    <script src="./js/fxWobble.js"></script>
+
+
+
+    <style>
+        html, body {
+            overflow : hidden;
+            width    : 100%;
+            height   : 100%;
+            margin   : 0;
+            padding  : 0;
+            background-color: 0;
+        }
+
+        .loader{
+            transition: all 0.3s ease-out;
+            z-index: 10;
+            width: 100%;
+            background-color: black;
+            color: white;
+            text-align: center;
+            margin-top: 30%;
+            position: absolute;
+        }
+        
+        #renderCanvas {
+            width        : 100%;
+            height       : 100%;
+            touch-action : none;
+        }
+    </style>
+</head>
+<body>
+ <div class="loader" id="customLoader">
+  // Loading Music 
+ </div>
+<canvas id="renderCanvas"></canvas>
+<script>
+
+var swap_time = 0;
+
+window.addEventListener('DOMContentLoaded', function() {
+
+    var canvas = document.getElementById('renderCanvas');
+
+    var engine = new BABYLON.Engine(canvas, true);
+    var loadscene = new BABYLON.Scene(engine);
+    var camera = new BABYLON.ArcRotateCamera("Camera", 0, Math.PI / 2, 12, BABYLON.Vector3.Zero(), loadscene);
+    
+    var fxLoader;
+      
+    var music;
+    var soundTrack, analyser,  assetsManager;
+    var assets = [];
+    
+    var workingArray;
+    var sceneCurrent, sceneMeter, sceneFloorWave, sceneMirrorGround, sceneTunnel, sceneWobble;
+    var soundLoaded = 0;
+             
+    var ended = false;             
+    // Assets manager
+    assetsManager = new BABYLON.AssetsManager(loadscene);
+
+    var toLoad = [
+        {name : "ring1", src : "assets/ring1.png", type : "tex" },
+        {name : "ring2", src : "assets/ring2.png", type : "tex" },
+        {name : "ring3", src : "assets/ring3.png", type : "tex" },
+        {name : "ring4", src : "assets/ring4.png", type : "tex" },
+        {name : "ring5", src : "assets/ring5.png", type : "tex" },
+        {name : "ring6", src : "assets/ring6.png", type : "tex" },
+        {name : "scale1", src : "assets/scale1.png", type : "tex" },
+        {name : "scale2", src : "assets/scale2.png", type : "tex" },
+        {name : "cred1", src : "assets/kohai.png", type : "tex" },
+        {name : "cred2", src : "assets/stv.png", type : "tex" },
+        {name : "cred3", src : "assets/delta.png", type : "tex" },
+        {name : "fasten", src : "assets/fasten.png", type : "tex" },
+        {name : "shake", src : "assets/shake.png", type : "tex" },
+        {name : "embark", src : "assets/embark.png", type : "tex" },
+        {name : "interface1", src : "assets/interface1.png", type : "tex" },
+        {name : "interface2", src : "assets/interface2.png", type : "tex" },
+        {name : "interface3", src : "assets/interface3.png", type : "tex" },
+        {name : "oblique1", src : "assets/oblique1.png", type : "tex" },
+        {name : "babylonyzer", src : "assets/babylonyzer.png", type : "tex" },
+        {name : "babyaudio", src : "assets/babyaudio.png", type : "tex" },
+        {name : "scapetex", src : "assets/square.jpg", type : "tex" },
+        {name : "tun_l", src : "assets/tunnel_horizontal.png", type : "tex" },
+        {name : "tun_m", src : "assets/tunnel_medium.png", type : "tex" },
+        {name : "tun_b", src : "assets/tunnel_big.png", type : "tex" },
+        {name : "spheremap", src : "assets/spheremap.jpg", type : "tex" },
+        {name : "flare", src : "assets/flare.png", type : "tex" },
+        {name : "music", src : "assets/music.png", type : "tex" },
+        {name : "powered", src : "assets/powered.png", type : "tex" },
+        {name : "scape", src : "scape.babylon", type : "sce" }
+
+    ];
+
+    toLoad.forEach(function(obj) {
+      switch(obj.type) {
+           case 'tex':
+            var img = assetsManager.addTextureTask(obj.name, obj.src);
+            img.onSuccess = function(t) {
+              assets[t.name] = t.texture;
+            };
+            break;         
+          case 'sce':
+            BABYLON.SceneLoader.Load('./assets/', 'scape.babylon', engine, function (newScene) {
+              assets[obj.name] = newScene;
+            });
+           /* var sce = assetsManager.addMeshTask(obj.name, "", "./assets/", obj.src);
+            sce.onSuccess = function(t) {
+              assets[t.name] = t.scene;
+            };   */
+            break;
+      } 
+    
+
+    });
+
+    //sceneIntro = fxIntro.init(engine, canvas, assets); 
+    loadscene.render();
+    //engine.displayLoadingUI();
+
+    
+    // WAITING MUSIC BINARY CALLBACK -------------------------------------------------------  
+    music = new BABYLON.Sound("Music", "music/downtolove.mp3", loadscene, function () {
+    
+      sceneIntro = fxIntro.init(engine, canvas, assets);
+      sceneMeter = fxMeter.init(engine, canvas, assets);
+      sceneFloorWave = fxFloorWave.init(engine, canvas, assets);
+      sceneMirrorGround = fxMirrorGround.init(engine, canvas, assets);
+      sceneTunnel = fxTunnel.init(engine, canvas, assets);
+      sceneWobble = fxWobble.init(engine, canvas, assets);
+      sceneCurrent = fxMeter;
+
+
+      // CREATE ANALYSER -------------------------------------------------------
+      soundTrack = new BABYLON.SoundTrack(loadscene);    
+      analyser = new BABYLON.Analyser(sceneCurrent);   
+      soundTrack.AddSound(music);
+      soundTrack.connectToAnalyser(analyser);
+      analyser.DEBUGCANVASSIZE.width = 320;
+      analyser.DEBUGCANVASSIZE.height = 200;
+      analyser.DEBUGCANVASPOS.y = 80;
+      //analyser.drawDebugCanvas();        
+      soundLoaded=1;
+      //console.log('play');  
+  
+  
+  
+      // CREATE RENDERLOOP -----------------------------------------------------      
+  
+      var startTime = Date.now();
+      
+      engine.runRenderLoop(function() {
+          /*
+          switch(sceneCurrent) {
+             case fxLoader:
+                loadscene.render();
+                break;
+             case fxIntro:
+                sceneTunnel.render();
+                break;         
+            case fxMeter:
+                sceneMeter.render();
+                break;
+            case fxFloorWave:
+                sceneFloorWave.render();
+                break;
+            case fxMirrorGround:
+                sceneMirrorGround.render();
+                break;
+        } 
+        */
+        if( !ended ){
+          if (swap_time > 0 && swap_time < 314) sceneTunnel.render();
+          if (swap_time > 314 && swap_time < 640) sceneMeter.render();
+          if (swap_time > 640 && swap_time < 958) sceneFloorWave.render();
+          if (swap_time > 958 && swap_time <= 1700) sceneWobble.render();
+  
+  
+          if (swap_time > 1700) startTime = Date.now();
+          
+          var deltaTime = Date.now() - startTime;
+          swap_time = deltaTime*0.01;//0.1;
+          //cl.textContent = swap_time;
+        }else{
+          loadscene.render();
+        }
+        
+        
+      });      
+ 
+        
+      sceneTunnel.registerBeforeRender(function (){
+            workingArray = analyser.getByteFrequencyData();   
+            fxTunnel.renderBefore(workingArray);
+      });  
+      sceneMeter.registerBeforeRender(function (){
+            workingArray = analyser.getByteFrequencyData();   
+            fxMeter.renderBefore(workingArray);
+      });
+      sceneFloorWave.registerBeforeRender(function (){
+            workingArray = analyser.getByteFrequencyData();     
+            fxFloorWave.renderBefore(workingArray);
+      });
+      sceneMirrorGround.registerBeforeRender(function (){
+            workingArray = analyser.getByteFrequencyData();     
+            fxMirrorGround.renderBefore(workingArray);
+      });
+      sceneWobble.registerBeforeRender(function (){
+            workingArray = analyser.getByteFrequencyData();     
+            fxWobble.renderBefore(workingArray);
+      });
+      
+      //sceneMeter.debugLayer.show();
+     
+     var cl = document.getElementById('customLoader');
+      cl.style.opacity = 0.0;
+      cl.style.top = 0;
+      cl.style.margin = 0;
+      music.play();
+    });
+        
+    music.onended = function () {
+      //cl.style.opacity = 1.0;
+      //cl.style.height = '100%';
+      console.log('ended');
+      ended = true;
+    }    
+    
+    
+    assetsManager.load();
+
+    key('space', function(){ music.stop(); });
+    key('0', function(){ sceneCurrent = fxIntro; });
+    key('1', function(){ sceneCurrent = fxMeter; });
+    key('2', function(){ sceneCurrent = fxFloorWave; });
+    key('3', function(){ sceneCurrent = fxMirrorGround; });
+
+    // the canvas/window resize event handler
+    window.addEventListener('resize', function() {
+        engine.resize();  
+
+    });
+});
+
+</script>
+
+</body>
+</html>
