@@ -1,4 +1,4 @@
-# babylonyzer
+# BaByLoNyZeR
 
 -- A WebGL presentation
 
