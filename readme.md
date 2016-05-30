@@ -6,7 +6,7 @@
 
 -- Featured on the Babylon.js site
 
-Code by : Steve 'STV' DURAN
+Code by : Steve 'STV' DURAN &
           Yann 'Kohai' PARMENTIER
           
 Visuals & 3D : Yann 'Kohai' PARMENTIER
